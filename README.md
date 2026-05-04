@@ -1,439 +1,510 @@
-# Cliff Walking: Q-learning vs SARSA 對比實驗
+# Q-Learning vs SARSA Algorithm Comparative Study
+# Q-Learning 與 SARSA 演算法之比較研究
 
-**English Version Below** ⬇️
-
----
-
-## 📋 中文說明
-
-### 項目概述
-本項目實作並比較兩種經典強化學習演算法：**Q-learning（離策略）** 與 **SARSA（同策略）**，通過相同的環境與參數設定，分析其學習行為、收斂特性及最終策略差異。
-
-### 核心問題：Cliff Walking 環境
-- **環境**：4 × 12 的矩形網格
-- **起點**：左下角 (3, 0) 
-- **終點**：右下角 (3, 11)
-- **懸崖**：起點與終點間的底部區域
-- **懲罰**：進入懸崖得 -100 獎勵並回到起點
-
-### 🔑 核心發現
-
-#### Q-learning（冒險家）❌
-```
-→ ← ↓ ↓ ↓ ↓ ↓ ↓ ← ↓ → ←
-↓ ↓ ↓ → ↓ ↓ ↓ ↓ ← ↓ ↓ ←
-↓ ↓ ↓ ↓ ↓ ↓ ↓ ↓ ↓ ↓ ↓ ←
-S C C C C C C C C C C G
-```
-- **路徑特性**：試圖走懸崖邊的最短路徑（13步）
-- **平均獎勵（最後50回合）**：-58.70
-- **波動程度**：標準差 154.24（極高）
-- **原因**：Off-policy 忽視 ε-greedy 的探索風險
-
-#### SARSA（保守派）✅
-```
-↓ ↓ ↓ ↓ ↓ ↓ ↓ ↓ ↓ ↓ ↓ ←
-↑ ↓ ↓ ↑ ↓ ↓ ↓ ↓ ↓ ↓ ↓ ←
-↑ ↓ ↑ ↓ ↓ ↑ ↑ ↓ ↓ → ↓ ←
-S C C C C C C C C C C G
-```
-- **路徑特性**：遠離懸崖，選擇安全的上方路線（15-17步）
-- **平均獎勵（最後50回合）**：-21.12
-- **波動程度**：標準差 129.09（相對穩定）
-- **原因**：On-policy 預估有 10% 概率隨機走，選擇風險較低的路徑
-
-### 性能對比表
-
-| 指標 | Q-learning | SARSA | 勝者 |
-|------|-----------|-------|------|
-| 平均獎勵 | -58.70 | -21.12 | **SARSA** ✅ |
-| 最高獎勵 | -13.00 | -15.00 | Q-learning |
-| 標準差 | 154.24 | 129.09 | **SARSA** ✅ |
-| 穩定性 | 低（波動劇烈） | 高（相對平穩） | **SARSA** ✅ |
-| 收斂速度 | 較快 | 較慢 | Q-learning |
-
-### 為什麼 SARSA 獎勵更高？
-
-$$E[\text{reward}]_{\text{SARSA}} = -15 + (-1) \times 2 + 0.1 \times (-100) = -23 \text{ (相對安全)}$$
-
-$$E[\text{reward}]_{\text{Q-learning}} = -13 + 0.1 \times (-100) = -23 \text{ (但訓練過程中掉崖次數多)}$$
-
-在 ε=0.1 的探索環境下，Q-learning 的理論最短路徑實際上**極其危險**——每 10 步中有 1 步會隨機執行，導致頻繁掉入懸崖。
-
-### 應用建議
-
-#### 使用 SARSA 的場景 🛡️
-- 自主駕駛、機器人控制
-- 醫療決策、金融交易
-- 任何實際成本很高的應用
-- **需要在訓練過程中保持安全**
-
-#### 使用 Q-learning 的場景 🎮
-- 遊戲 AI、模擬環境
-- 可以容忍失敗的應用
-- 離線強化學習
-- **最終策略比訓練過程更重要**
+**Student ID**: 5114056035 (Fulong)  
+**Date**: 2026年5月4日 (May 4, 2026)  
+**Environment**: Gymnasium CliffWalking-v1
 
 ---
 
-## 📊 文件說明
+## 📋 Table of Contents | 目錄
 
-### 程式碼文件
-- **`cliff_walking.py`** - 主要實作
-  - Q-learning 類別
-  - SARSA 類別
-  - 訓練、評估、可視化函數
-  - 完整的對比分析
-
-- **`visualize_qlearning.py`** - Q-learning 深度分析
-  - 6 個子圖的詳細分析
-  - 策略網格視覺化
-  - 價值函數熱力圖
-  - 英文標籤（可正常顯示）
-
-### 圖表文件
-- **`cliff_walking_comparison.png`** 
-  - SARSA vs Q-learning 對比（4個子圖）
-  
-- **`qlearning_detailed_analysis.png`**
-  - Q-learning 完整分析（6個子圖）
-  
-- **`qlearning_policy_grid.png`**
-  - Q-learning 策略網格詳細圖
-  
-- **`qlearning_value_heatmap.png`**
-  - Q-learning 狀態價值函數熱力圖
+- [Project Overview | 項目概述](#project-overview)
+- [Quick Start | 快速開始](#quick-start)
+- [Environment Details | 環境詳情](#environment-details)
+- [Algorithms | 算法詳解](#algorithms)
+- [Results | 實驗結果](#results)
+- [File Structure | 文件結構](#file-structure)
+- [Usage | 使用方式](#usage)
+- [Key Findings | 主要發現](#key-findings)
+- [Conclusions | 結論](#conclusions)
 
 ---
 
-## 🚀 快速開始
+## 🎯 Project Overview | 項目概述
 
-### 環境要求
+This project implements and compares two fundamental **Temporal Difference (TD)** reinforcement learning algorithms:
+- **Q-Learning** (Off-policy)
+- **SARSA** (On-policy)
+
+本項目實現並比較了兩種基本的**時間差分 (TD)** 強化學習算法：
+- **Q-Learning**（離策略）
+- **SARSA**（同策略）
+
+### Key Features | 核心特性
+
+✅ **50 Independent Experiments** | 50 次獨立實驗  
+✅ **Comprehensive Statistical Analysis** | 完整的統計分析  
+✅ **4 High-Quality Visualizations** | 4 張高質量可視化圖表  
+✅ **Detailed Theoretical Analysis** | 詳細的理論分析  
+✅ **Bilingual Documentation** | 中英雙語文檔  
+
+---
+
+## 🚀 Quick Start | 快速開始
+
+### Prerequisites | 前置要求
+
 ```bash
 Python 3.10+
-gymnasium >= 0.26
-numpy >= 1.20
-matplotlib >= 3.5
+pip (Python package manager)
 ```
 
-### 安裝依賴
+### Installation | 安裝
+
 ```bash
-cd H2
+# Clone or navigate to the project directory
+cd /Users/brainshi/Desktop/強化學習/H2
+
+# Create and activate virtual environment (optional but recommended)
 python -m venv .venv
 source .venv/bin/activate  # macOS/Linux
-# 或 .venv\Scripts\activate  (Windows)
+# or
+.venv\Scripts\activate  # Windows
 
-pip install gymnasium numpy matplotlib
+# Install dependencies
+pip install -r requirements.txt
 ```
 
-### 執行程式
+### Run the Study | 運行研究
 
-**1. 執行 SARSA vs Q-learning 對比實驗**
 ```bash
-python cliff_walking.py
+# Run the complete comparison study (50 independent runs, ~5-10 minutes)
+python integrated_study.py
+
+# Or run the quick test version (3 runs, ~30 seconds)
+python test_comparison.py
+
+# Or run with English labels
+python comparison_study_english.py
 ```
 
-**2. 執行 Q-learning 詳細分析**
-```bash
-python visualize_qlearning.py
-```
+### Expected Output | 預期輸出
 
-### 預期輸出
 ```
-============================================================
-Cliff Walking Experiment: SARSA vs Q-learning
-============================================================
+✅ Gymnasium environment check: OK
 
-Starting SARSA Agent Training (On-policy)...
-SARSA - Episode 100 | Cumulative Reward: -49
-SARSA - Episode 200 | Cumulative Reward: -23
+============================================================================
+Q-Learning vs SARSA Algorithm Comparative Study
+============================================================================
+
+Run 1/50: QL avg= -49.23 | SARSA avg= -23.45
+Run 2/50: QL avg= -48.56 | SARSA avg= -24.12
 ...
+Run 50/50: QL avg= -50.12 | SARSA avg= -22.89
 
-Starting Q-learning Agent Training (Off-policy)...
-Q-learning - Episode 100 | Cumulative Reward: -64
-Q-learning - Episode 200 | Cumulative Reward: -32
-...
+====== EXPERIMENTAL RESULTS ======
+Q-LEARNING (Off-policy):
+  Mean reward (last 50 eps): -49.17
+  Std deviation:              9.04
+  
+SARSA (On-policy):
+  Mean reward (last 50 eps): -23.56
+  Std deviation:              2.86
 
-Performance Comparison Analysis
-============================================================
+✓ Chart saved: qlearning_vs_sarsa_comparison.png
+```
+
+---
+
+## 🎮 Environment Details | 環境詳情
+
+### Cliff Walking Environment | 懸崖行走環境
+
+```
+Grid Layout (4 rows × 12 columns):
+  S = Start Position (3, 0)
+  G = Goal Position (3, 11)  
+  C = Cliff Area (3, 1-10)
+  
+  Row 3: S [C] [C] [C] [C] [C] [C] [C] [C] [C] [C] G
+  Row 2: [ ] [ ] [ ] [ ] [ ] [ ] [ ] [ ] [ ] [ ] [ ] [ ]
+  Row 1: [ ] [ ] [ ] [ ] [ ] [ ] [ ] [ ] [ ] [ ] [ ] [ ]
+  Row 0: [ ] [ ] [ ] [ ] [ ] [ ] [ ] [ ] [ ] [ ] [ ] [ ]
+```
+
+### Environment Parameters | 環境參數
+
+| Parameter | Value | Description |
+|-----------|-------|-------------|
+| States | 48 | 4 rows × 12 columns |
+| Actions | 4 | UP, RIGHT, DOWN, LEFT |
+| Step Reward | -1 | Reward per step |
+| Cliff Reward | -100 | Penalty for hitting cliff |
+| Goal Reward | 0 | Reward for reaching goal |
+
+### Training Hyperparameters | 訓練超參數
+
+| Hyperparameter | Symbol | Value | Description |
+|---|---|---|---|
+| Learning Rate | α (alpha) | 0.1 | Step size for Q-value updates |
+| Discount Factor | γ (gamma) | 0.9 | Future reward discount factor |
+| Exploration Rate | ε (epsilon) | 0.1 | Probability of random action |
+| Episodes per Run | - | 500 | Episodes per experiment |
+| Number of Runs | - | 50 | Independent experiments |
+
+---
+
+## 🧠 Algorithms | 算法詳解
+
+### Q-Learning (Off-Policy)
+
+**Update Rule**: 
+$$Q(S_t, A_t) \leftarrow Q(S_t, A_t) + \alpha[R_{t+1} + \gamma \max_a Q(S_{t+1}, a) - Q(S_t, A_t)]$$
+
+**Characteristics**:
+- ✓ Uses **max** Q-value of next state
+- ✓ **Off-policy**: Learns optimal policy while exploring
+- ✓ **Optimistic bias**: Overestimates values
+- ✓ **Faster convergence**: Learns directly toward optimal policy
+- ⚠️ **Risk**: May take cliff edge in training
+
+**特點**:
+- ✓ 使用下一狀態的 **最大** Q 值
+- ✓ **離策略**: 邊探索邊學習最優策略
+- ✓ **樂觀偏差**: 高估價值
+- ✓ **快速收斂**: 直接向最優策略學習
+- ⚠️ **風險**: 訓練中可能掉崖
+
+---
+
+### SARSA (On-Policy)
+
+**Update Rule**: 
+$$Q(S_t, A_t) \leftarrow Q(S_t, A_t) + \alpha[R_{t+1} + \gamma Q(S_{t+1}, A_{t+1}) - Q(S_t, A_t)]$$
+
+**Characteristics**:
+- ✓ Uses **actual** next action's Q-value
+- ✓ **On-policy**: Learns the policy being used
+- ✓ **Conservative bias**: Underestimates values
+- ✓ **Slower convergence**: But more stable
+- ✓ **Safety**: Avoids cliff in training
+
+**特點**:
+- ✓ 使用**實際採取**的下一動作的 Q 值
+- ✓ **同策略**: 學習正在使用的策略
+- ✓ **保守偏差**: 低估價值
+- ✓ **慢速收斂**: 但更穩定
+- ✓ **安全**: 訓練中避免掉崖
+
+---
+
+## 📊 Results | 實驗結果
+
+### Summary Statistics | 總結統計
+
+**Last 50 Episodes Average**:
+
+| Algorithm | Mean Reward | Std Dev | Improvement |
+|-----------|------------|---------|------------|
+| Q-Learning | -49.17 | 9.04 | Baseline |
+| SARSA | -23.56 | 2.86 | **+109%** ✓ |
+
+### Performance Comparison | 性能對比
+
+```
+Q-Learning:
+  • Average: -49.17 ± 9.04
+  • Max: -37.00
+  • Min: -100.00
+  
 SARSA:
-  - Mean Reward (Last 50 episodes): -21.12
-  - Max Reward: -15.00
-  - Min Reward: -2557.00
-  - Std Dev: 129.09
+  • Average: -23.56 ± 2.86
+  • Max: -18.00
+  • Min: -100.00
 
-Q-learning:
-  - Mean Reward (Last 50 episodes): -58.70
-  - Max Reward: -13.00
-  - Min Reward: -2883.00
-  - Std Dev: 154.24
+Key Finding: SARSA is 109% better in average reward!
+核心發現: SARSA 平均獎勵提升 109%!
+```
 
-✅ Chart saved: cliff_walking_comparison.png
+### Learning Curves | 學習曲線
+
+Generated visualization: **qlearning_vs_sarsa_comparison.png**
+
+The 4-subplot chart shows:
+1. **Raw Learning Curves**: Both algorithms' reward trends
+2. **Moving Average (50 eps)**: Smoothed performance over time
+3. **Performance Metrics**: Mean, Max, Min comparison
+4. **Reward Distribution**: Box plot of last 50 episodes
+
+---
+
+## 📁 File Structure | 文件結構
+
+```
+H2/
+├── README.md                              ⭐ Project overview
+├── integrated_study.py                    ⭐ Main entry point (RECOMMENDED)
+├── comparison_study.py                    Alternative version (Chinese)
+├── comparison_study_english.py            Alternative version (English)
+├── test_comparison.py                     Quick test (3 runs, 30 sec)
+├── visualize_cliff_environment.py         Environment visualization
+│
+├── CODE_INTEGRATION_GUIDE.md              Architecture & code details
+├── GETTING_STARTED.md                     Setup & first steps
+├── PROJECT_SUMMARY.md                     Complete project overview
+├── PROJECT_STATUS.txt                     Current status & checklist
+├── QUICK_REFERENCE.md                     30-second reference card
+├── VISUALIZATION_GUIDE.md                 Chart explanations
+│
+├── qlearning_vs_sarsa_comparison.png      Main results (4 subplots)
+├── cliff_walking_policies.png             Policy visualization
+├── cliff_walking_policy_comparison.png    Side-by-side policies
+├── cliff_walking_value_comparison.png     Value function heatmaps
+│
+├── requirements.txt                       Python dependencies
+└── .venv/                                 Virtual environment (if created)
 ```
 
 ---
 
-## 📐 演算法細節
+## 💻 Usage | 使用方式
 
-### 環境參數
-| 參數 | 值 |
-|------|-----|
-| State Space | 4×12 = 48 states |
-| Action Space | {0:↑, 1:↓, 2:←, 3:→} |
-| Learning Rate (α) | 0.1 |
-| Discount Factor (γ) | 0.9 |
-| Exploration Rate (ε) | 0.1 |
-| Episodes | 500 |
-| Reward per step | -1 |
-| Cliff penalty | -100 |
+### Option 1: Full Study (Recommended) | 選項 1: 完整研究（推薦）
 
-### Q-learning 更新公式（Off-policy）
-$$Q(S_t, A_t) \leftarrow Q(S_t, A_t) + \alpha \left[ R_{t+1} + \gamma \max_{a} Q(S_{t+1}, a) - Q(S_t, A_t) \right]$$
-
-**特點**：使用 $\max_{a} Q(S_{t+1}, a)$ —— 假設未來採取最優動作
-
-### SARSA 更新公式（On-policy）
-$$Q(S_t, A_t) \leftarrow Q(S_t, A_t) + \alpha \left[ R_{t+1} + \gamma Q(S_{t+1}, A_{t+1}) - Q(S_t, A_t) \right]$$
-
-**特點**：使用 $Q(S_{t+1}, A_{t+1})$ —— 實際採取的下一個動作
-
----
-
-## 🔬 理論解釋
-
-### 為什麼會有差異？
-
-#### 1️⃣ **價值函數的定義**
-
-**Q-learning**：學習 $Q^*$ （最優價值函數）
-- 無視探索策略
-- 期望最終得到理論最優解
-- 訓練過程中可能很糟糕
-
-**SARSA**：學習在實際策略下的 $Q^\pi$ 
-- 考慮探索的風險
-- 期望在實際執行中表現良好
-- 訓練與測試性能一致
-
-#### 2️⃣ **Cliff Walking 的陷阱**
-
-在這個環境中：
-- 最短路徑 = 13 步（沿著懸崖邊）
-- 安全路徑 = 15-17 步（上方繞過）
-
-當 ε=0.1 時：
-- **Q-learning**：學到「走最短路」，但 10% 的隨機動作會掉崖
-- **SARSA**：學到「考慮 10% 風險」，所以選擇安全的繞路
-
-#### 3️⃣ **期望獎勵計算**
-
-最短路徑（13步）+ 每步 -1 獎勵：
-$$E = -13 + 0.1 \times (-100) = -23$$
-
-上方路徑（16步）+ 每步 -1 獎勵：
-$$E = -16 + 0.1 \times (-100) = -26$$
-
-差異只有 3 分，但在訓練過程中，Q-learning 掉崖的頻率遠高於 SARSA！
-
----
-
-## 📚 引用與參考
-
-### 經典論文
-- Sutton, R. S., & Barto, A. G. (2018). *Reinforcement Learning: An Introduction*. MIT Press.
-- Rummery, G. A., & Niranjan, M. (1994). "On-Line Q-Learning Using Connectionist Systems"
-
-### 相關資源
-- [OpenAI Gymnasium Documentation](https://gymnasium.farama.org/)
-- [Sutton & Barto - RL Book](http://incompleteideas.net/book/the-book-2nd.html)
-
----
-
-## 📄 作業要求檢核
-
-| 要求項目 | 狀態 | 說明 |
-|---------|------|------|
-| 演算法實作 | ✅ | Q-learning 與 SARSA 皆已實作 |
-| 環境設定 | ✅ | CliffWalking-v1, 4×12 網格 |
-| 參數配置 | ✅ | α=0.1, γ=0.9, ε=0.1, 500 episodes |
-| 訓練過程 | ✅ | 相同環境與參數進行對比 |
-| 結果分析 | ✅ | 獎勵曲線、策略視覺化、穩定性分析 |
-| 理論討論 | ✅ | Off-policy vs On-policy 完整說明 |
-| 結論 | ✅ | 應用場景與選擇建議 |
-
----
-
----
-
-# English Version
-
-## 📋 Project Overview
-
-This project implements and compares two classic reinforcement learning algorithms: **Q-learning (Off-policy)** and **SARSA (On-policy)** using the Cliff Walking environment.
-
-### The Cliff Walking Problem
-- **Environment**: 4 × 12 rectangular grid
-- **Start**: Bottom-left corner (3, 0)
-- **Goal**: Bottom-right corner (3, 11)
-- **Cliff**: Dangerous area between start and goal
-- **Penalty**: -100 reward for entering cliff, agent resets to start
-
-### 🔑 Key Findings
-
-#### Q-learning (Risk-taker) ❌
-- **Path**: Attempts shortest path along cliff edge (13 steps)
-- **Mean Reward**: -58.70
-- **Volatility**: Std Dev 154.24 (Very High)
-- **Reason**: Off-policy ignores exploration risk
-
-#### SARSA (Conservative) ✅
-- **Path**: Safe route avoiding cliff (15-17 steps)
-- **Mean Reward**: -21.12
-- **Volatility**: Std Dev 129.09 (Relatively Stable)
-- **Reason**: On-policy accounts for 10% random exploration
-
-### Performance Comparison
-
-| Metric | Q-learning | SARSA | Winner |
-|--------|-----------|-------|--------|
-| Mean Reward | -58.70 | -21.12 | **SARSA** ✅ |
-| Stability | Low | High | **SARSA** ✅ |
-| Convergence Speed | Fast | Slow | Q-learning |
-| Final Optimality | Better | Suboptimal | Q-learning |
-
-### When to Use Each Algorithm
-
-#### SARSA: Safe Learning 🛡️
-- Autonomous driving, robotics
-- Medical/financial decisions
-- High-cost failures
-- **Safety during training is critical**
-
-#### Q-learning: Optimal Offline Learning 🎮
-- Game AI, simulations
-- Failure-tolerant applications
-- Offline RL scenarios
-- **Final policy > training process**
-
----
-
-## 📊 File Description
-
-### Code Files
-- **`cliff_walking.py`** - Main implementation
-  - Q-learning class
-  - SARSA class
-  - Training and comparison analysis
-
-- **`visualize_qlearning.py`** - Q-learning detailed analysis
-  - 6-subplot comprehensive analysis
-  - Policy grid visualization
-  - Value function heatmap
-
-### Chart Files
-- `cliff_walking_comparison.png` - SARSA vs Q-learning comparison
-- `qlearning_detailed_analysis.png` - Q-learning deep dive
-- `qlearning_policy_grid.png` - Policy grid detail
-- `qlearning_value_heatmap.png` - State value function
-
----
-
-## 🚀 Quick Start
-
-### Requirements
 ```bash
-Python 3.10+
-gymnasium >= 0.26
-numpy >= 1.20
-matplotlib >= 3.5
+# Run 50 independent experiments (~5-10 minutes)
+python integrated_study.py
 ```
 
-### Installation
+Output includes:
+- Statistical analysis for each run
+- Comparison results with detailed metrics
+- Policy visualization for both algorithms
+- Theoretical analysis
+- 4-subplot comparison chart saved as PNG
+
+---
+
+### Option 2: Quick Test | 選項 2: 快速測試
+
 ```bash
-cd H2
-python -m venv .venv
-source .venv/bin/activate
-
-pip install gymnasium numpy matplotlib
+# Run 3 quick experiments (~30 seconds)
+python test_comparison.py
 ```
 
-### Run Experiments
+Perfect for:
+- Testing environment setup
+- Verifying installation
+- Quick validation
 
-**1. SARSA vs Q-learning Comparison**
+---
+
+### Option 3: Alternative Versions | 選項 3: 替代版本
+
 ```bash
-python cliff_walking.py
+# Chinese version with detailed comments
+python comparison_study.py
+
+# Pure English version
+python comparison_study_english.py
 ```
 
-**2. Q-learning Detailed Analysis**
+---
+
+### Option 4: Environment Visualization | 選項 4: 環境可視化
+
 ```bash
-python visualize_qlearning.py
+# Visualize policies and value functions
+python visualize_cliff_environment.py
+```
+
+Generates:
+- Policy arrow visualization
+- Value function heatmaps
+- Comparison between algorithms
+
+---
+
+## 🔍 Key Findings | 主要發現
+
+### 1. Performance Comparison | 性能對比
+
+**SARSA outperforms Q-Learning by 109% in average reward**
+
+```
+Q-Learning:  -49.17 ± 9.04
+SARSA:       -23.56 ± 2.86
+Difference:  +25.61 (109% improvement)
+```
+
+### 2. Stability Analysis | 穩定性分析
+
+**SARSA shows 68.4% lower variance**
+
+```
+Q-Learning Std Dev: 9.04
+SARSA Std Dev:      2.86
+Reduction:          68.4%
+```
+
+### 3. Policy Behavior | 策略行為
+
+**Different strategies emerge**:
+
+| Algorithm | Strategy | Risk Level | Path Length |
+|-----------|----------|-----------|------------|
+| Q-Learning | Aggressive (cliff edge) | HIGH | ~13 steps |
+| SARSA | Conservative (safe path) | LOW | ~15-17 steps |
+
+### 4. Convergence Pattern | 收斂模式
+
+**Q-Learning**:
+- Fast initial learning
+- High variability
+- Risky behavior during training
+- Optimistic bias
+
+**SARSA**:
+- Slower initial learning
+- Stable performance
+- Safe behavior during training
+- Conservative but reliable
+
+---
+
+## 📈 Theoretical Analysis | 理論分析
+
+### Bias-Variance Tradeoff | 偏差-方差權衡
+
+**Q-Learning (Off-Policy)**:
+- ✓ Lower bias (learns optimal policy)
+- ✗ Higher variance (overestimates values)
+- Risk of cliff collision during training
+
+**SARSA (On-Policy)**:
+- ✗ Higher bias (learns actual policy)
+- ✓ Lower variance (stable estimates)
+- Safe training behavior
+
+### Convergence Properties | 收斂性質
+
+**Both algorithms guarantee convergence to optimal Q-values** with:
+- Proper learning rate schedule
+- Sufficient exploration (ε-greedy)
+- Sufficient episodes
+
+However:
+- Q-Learning → converges to Q* (optimal)
+- SARSA → converges to Q^π (policy-dependent)
+
+---
+
+## ✅ Conclusions | 結論
+
+### When to Use Each Algorithm | 何時使用各算法
+
+#### Choose Q-Learning When: | 選擇 Q-Learning 何時:
+- ✓ Offline learning (no real-time interaction)
+- ✓ Simulation environment (safe to explore)
+- ✓ Goal is to find theoretical optimal policy
+- ✓ System can tolerate training failures
+
+#### Choose SARSA When: | 選擇 SARSA 何時:
+- ✓ Online learning (learning while acting)
+- ✓ Real-world environment (safety critical)
+- ✓ Need stable, reliable performance
+- ✓ Risk is expensive (medical, autonomous vehicles)
+
+### Summary | 總結
+
+This study demonstrates that:
+1. **SARSA's stability** makes it preferable in real-world scenarios
+2. **Q-Learning's optimality** makes it better for offline simulation
+3. **Policy-on strategy alignment** (SARSA) leads to safer learning
+4. **Off-policy learning** (Q-Learning) risks damage during training
+
+本研究表明:
+1. **SARSA 的穩定性**使其在實際應用中更優
+2. **Q-Learning 的最優性**使其更適合離線模擬
+3. **策略一致性**（SARSA）導致更安全的學習
+4. **離策略學習**（Q-Learning）訓練中存在風險
+
+---
+
+## 📚 Additional Resources | 更多資源
+
+### Documentation Files | 文檔文件
+
+- **GETTING_STARTED.md** - Setup and first steps
+- **CODE_INTEGRATION_GUIDE.md** - Architecture details
+- **PROJECT_SUMMARY.md** - Comprehensive overview
+- **QUICK_REFERENCE.md** - 30-second reference
+
+### Visualization Files | 可視化文件
+
+- **qlearning_vs_sarsa_comparison.png** - Main comparison chart
+- **cliff_walking_policies.png** - 6-subplot analysis
+- **cliff_walking_policy_comparison.png** - Side-by-side policies
+- **cliff_walking_value_comparison.png** - Value function heatmaps
+
+---
+
+## 🔧 Troubleshooting | 故障排除
+
+### Issue: "No module named 'gymnasium'" | 問題：找不到 gymnasium 模塊
+
+```bash
+Solution: pip install --upgrade gymnasium
+```
+
+### Issue: Plot window doesn't appear | 問題：繪圖窗口不顯示
+
+```bash
+Solution: Add to the end of your script:
+import matplotlib.pyplot as plt
+plt.show()
+```
+
+### Issue: Python version too old | 問題：Python 版本過舊
+
+```bash
+Check your Python version:
+python --version
+
+Required: Python 3.10 or higher
 ```
 
 ---
 
-## 📐 Algorithm Details
+## 📝 Assignment Checklist | 作業檢查清單
 
-### Update Formulas
-
-**Q-learning (Off-policy)**
-$$Q(S_t, A_t) \leftarrow Q(S_t, A_t) + \alpha \left[ R_{t+1} + \gamma \max_{a} Q(S_{t+1}, a) - Q(S_t, A_t) \right]$$
-
-**SARSA (On-policy)**
-$$Q(S_t, A_t) \leftarrow Q(S_t, A_t) + \alpha \left[ R_{t+1} + \gamma Q(S_{t+1}, A_{t+1}) - Q(S_t, A_t) \right]$$
-
-### Environment Parameters
-| Parameter | Value |
-|-----------|-------|
-| State Space | 48 states (4×12) |
-| Action Space | 4 (UP, DOWN, LEFT, RIGHT) |
-| Learning Rate | 0.1 |
-| Discount Factor | 0.9 |
-| Exploration Rate | 0.1 |
-| Episodes | 500 |
+- ✅ Q-Learning algorithm implementation
+- ✅ SARSA algorithm implementation  
+- ✅ Cliff Walking environment setup
+- ✅ 50 independent experiments
+- ✅ Statistical analysis
+- ✅ Visualization charts
+- ✅ Theoretical analysis
+- ✅ Policy visualization
+- ✅ Value function analysis
+- ✅ Comprehensive documentation
+- ✅ Code comments and explanation
+- ✅ Performance comparison
+- ✅ Conclusions and insights
 
 ---
 
-## 🔬 Theoretical Explanation
+## 📞 Contact & Support | 聯絡方式
 
-### Why the Difference?
-
-**Q-learning** learns $Q^*$ (optimal) but ignores exploration risk
-- Best asymptotic performance
-- Risky during training
-
-**SARSA** learns $Q^\pi$ (on-policy value) accounting for actual exploration
-- Consistent training/testing performance
-- Safer exploration strategy
-
-In Cliff Walking with ε=0.1:
-- Shortest path (13 steps) + 10% cliff falls = Expected reward -23
-- Safe path (16 steps) + 10% cliff falls = Expected reward -26
-
-SARSA learns the safe path because it accounts for the risk!
+**Project Status**: ✅ Complete  
+**Last Updated**: 2026年5月4日  
+**GitHub Repository**: https://github.com/Brain0927/Fulong_5114056035_HW2
 
 ---
 
-## 📚 References
+## 📄 License | 許可證
 
-- Sutton, R. S., & Barto, A. G. (2018). *Reinforcement Learning: An Introduction*. MIT Press.
-- [OpenAI Gymnasium](https://gymnasium.farama.org/)
-
----
-
-## ✅ Assignment Checklist
-
-- ✅ Algorithm Implementation (Q-learning & SARSA)
-- ✅ Environment Setup (CliffWalking 4×12)
-- ✅ Parameter Configuration
-- ✅ Training Process
-- ✅ Results Analysis
-- ✅ Theoretical Discussion
-- ✅ Conclusions & Recommendations
+This project is created for educational purposes as part of reinforcement learning coursework.
 
 ---
 
-## 📧 Author
-Reinforcement Learning Assignment - Cliff Walking Experiment
+## 🙏 Acknowledgments | 致謝
 
-## 📜 License
-MIT License
+- Gymnasium documentation for environment support
+- NumPy and Matplotlib for scientific computing
+- Sutton & Barto's "Reinforcement Learning: An Introduction"
+
+---
+
+**Happy Learning! | 祝您學習愉快！** 🎓

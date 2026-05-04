@@ -27,7 +27,7 @@ np.random.seed(42)
 class EnvironmentConfig:
     """環境配置類"""
     
-    def __init__(self):
+    def __init__(self, num_runs: int = 50):
         # 環境參數
         self.env_name = "CliffWalking-v1"
         self.grid_size = (4, 12)
@@ -49,7 +49,7 @@ class EnvironmentConfig:
         self.discount_factor = 0.9      # γ
         self.epsilon = 0.1              # ε
         self.episodes = 500
-        self.num_runs = 50
+        self.num_runs = num_runs
         
     def print_config(self):
         """打印環境配置"""
@@ -542,6 +542,9 @@ def main():
     results = comparator.analyze_results(qlearning_rewards, sarsa_rewards)
     comparator.print_comparison_results(results)
     
+    # 3.5 繪製圖表
+    plot_results(results)
+    
     # 4. 訓練最終模型並可視化策略
     print("訓練最終模型以展示策略...\n")
     env = gym.make("CliffWalking-v1")
@@ -600,6 +603,87 @@ def print_theoretical_analysis():
     print("   • 學習實際策略下的價值")
     print("   • 收斂速度慢")
     print("   • 但訓練過程更穩定\n")
+
+
+def plot_results(results: Dict) -> None:
+    """
+    繪製對比圖表
+    
+    Args:
+        results: 分析結果字典
+    """
+    print("\n📊 正在生成圖表...\n")
+    
+    ql_rewards = results['qlearning']['rewards']
+    sarsa_rewards = results['sarsa']['rewards']
+    
+    # 創建圖表
+    fig, axes = plt.subplots(2, 2, figsize=(14, 10))
+    fig.suptitle('Q-Learning vs SARSA Algorithm Comparison', fontsize=16, fontweight='bold')
+    
+    # 1. 累積獎勵曲線
+    ax = axes[0, 0]
+    episodes = range(1, len(ql_rewards) + 1)
+    ax.plot(episodes, ql_rewards, label='Q-Learning', color='red', linewidth=2, alpha=0.7)
+    ax.plot(episodes, sarsa_rewards, label='SARSA', color='blue', linewidth=2, alpha=0.7)
+    ax.set_xlabel('Episodes', fontsize=10)
+    ax.set_ylabel('Average Reward', fontsize=10)
+    ax.set_title('Learning Curves Comparison', fontsize=12, fontweight='bold')
+    ax.legend()
+    ax.grid(True, alpha=0.3)
+    
+    # 2. 移動平均（50 回合）
+    ax = axes[0, 1]
+    window = 50
+    ql_ma = np.convolve(ql_rewards, np.ones(window)/window, mode='valid')
+    sarsa_ma = np.convolve(sarsa_rewards, np.ones(window)/window, mode='valid')
+    episodes_ma = range(window, len(ql_rewards) + 1)
+    ax.plot(episodes_ma, ql_ma, label='Q-Learning', color='red', linewidth=2)
+    ax.plot(episodes_ma, sarsa_ma, label='SARSA', color='blue', linewidth=2)
+    ax.set_xlabel('Episodes', fontsize=10)
+    ax.set_ylabel('Average Reward', fontsize=10)
+    ax.set_title(f'{window}-Episode Moving Average', fontsize=12, fontweight='bold')
+    ax.legend()
+    ax.grid(True, alpha=0.3)
+    
+    # 3. 性能對比柱狀圖
+    ax = axes[1, 0]
+    metrics = ['Mean', 'Std Dev', 'Max']
+    ql_values = [
+        results['qlearning']['mean'],
+        results['qlearning']['std'],
+        results['qlearning']['max']
+    ]
+    sarsa_values = [
+        results['sarsa']['mean'],
+        results['sarsa']['std'],
+        results['sarsa']['max']
+    ]
+    
+    x = np.arange(len(metrics))
+    width = 0.35
+    ax.bar(x - width/2, ql_values, width, label='Q-Learning', color='red', alpha=0.7)
+    ax.bar(x + width/2, sarsa_values, width, label='SARSA', color='blue', alpha=0.7)
+    ax.set_ylabel('Reward', fontsize=10)
+    ax.set_title('Performance Metrics Comparison', fontsize=12, fontweight='bold')
+    ax.set_xticks(x)
+    ax.set_xticklabels(metrics)
+    ax.legend()
+    ax.grid(True, alpha=0.3, axis='y')
+    
+    # 4. 最後 50 回合的獎勵分布
+    ax = axes[1, 1]
+    ql_last_50 = np.array(ql_rewards[-50:])
+    sarsa_last_50 = np.array(sarsa_rewards[-50:])
+    ax.boxplot([ql_last_50, sarsa_last_50], tick_labels=['Q-Learning', 'SARSA'])
+    ax.set_ylabel('Reward', fontsize=10)
+    ax.set_title('Reward Distribution (Last 50 Episodes)', fontsize=12, fontweight='bold')
+    ax.grid(True, alpha=0.3, axis='y')
+    
+    plt.tight_layout()
+    plt.savefig('qlearning_vs_sarsa_comparison.png', dpi=300, bbox_inches='tight')
+    print("✅ 圖表已保存：qlearning_vs_sarsa_comparison.png\n")
+    plt.show()
 
 
 def print_conclusions():
