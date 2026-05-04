@@ -29,7 +29,7 @@ class EnvironmentConfig:
     
     def __init__(self):
         # 環境參數
-        self.env_name = "CliffWalking-v0"
+        self.env_name = "CliffWalking-v1"
         self.grid_size = (4, 12)
         self.num_states = 48
         self.num_actions = 4
@@ -358,7 +358,7 @@ class AlgorithmComparison:
     
     def __init__(self, config: EnvironmentConfig):
         self.config = config
-        self.env = gym.make("CliffWalking-v0")
+        self.env = gym.make("CliffWalking-v1")
         
     def run_comparison(self) -> Tuple[List[List[float]], List[List[float]]]:
         """
@@ -544,7 +544,7 @@ def main():
     
     # 4. 訓練最終模型並可視化策略
     print("訓練最終模型以展示策略...\n")
-    env = gym.make("CliffWalking-v0")
+    env = gym.make("CliffWalking-v1")
     
     # Q-learning
     ql_agent = QLearningAgent(config)
@@ -650,12 +650,12 @@ def print_conclusions():
 if __name__ == "__main__":
     # 檢查 Gymnasium 安裝
     try:
-        env = gym.make("CliffWalking-v0")
+        env = gym.make("CliffWalking-v1")
         env.close()
         print("✅ Gymnasium 環境檢查：正常\n")
     except Exception as e:
         print(f"❌ 錯誤：{e}")
-        print("請運行: pip install gymnasium\n")
+        print("請運行: pip install --upgrade gymnasium\n")
         exit(1)
     
     # 運行主程序
